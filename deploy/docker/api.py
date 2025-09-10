@@ -42,6 +42,7 @@ from utils import (
     should_cleanup_task,
     decode_redis_hash,
     get_llm_api_key,
+    get_llm_base_url,
     validate_llm_provider
 )
 
@@ -96,7 +97,8 @@ async def handle_llm_qa(
         response = perform_completion_with_backoff(
             provider=config["llm"]["provider"],
             prompt_with_variables=prompt,
-            api_token=get_llm_api_key(config)
+            api_token=get_llm_api_key(config),
+            base_url=get_llm_base_url(config) or None,
         )
 
         return response.choices[0].message.content
@@ -131,7 +133,8 @@ async def process_llm_extraction(
         llm_strategy = LLMExtractionStrategy(
             llm_config=LLMConfig(
                 provider=provider or config["llm"]["provider"],
-                api_token=api_key
+                api_token=api_key,
+                base_url=get_llm_base_url(config) or None,
             ),
             instruction=instruction,
             schema=json.loads(schema) if schema else None,
@@ -204,6 +207,7 @@ async def handle_markdown_request(
                     llm_config=LLMConfig(
                         provider=provider or config["llm"]["provider"],
                         api_token=get_llm_api_key(config, provider),
+                        base_url=get_llm_base_url(config) or None,
                     ),
                     instruction=query or "Extract main content"
                 )

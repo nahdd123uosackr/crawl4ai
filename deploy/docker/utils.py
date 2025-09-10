@@ -37,6 +37,12 @@ def load_config() -> Dict:
         config["llm"]["api_key"] = llm_api_key
         logging.info("LLM API key loaded from LLM_API_KEY environment variable")
     
+    # Optional: LLM base_url override via env
+    llm_base_url = os.environ.get("LLM_BASE_URL")
+    if llm_base_url and not config["llm"].get("base_url"):
+        config["llm"]["base_url"] = llm_base_url
+        logging.info("LLM base_url loaded from LLM_BASE_URL environment variable")
+    
     return config
 
 def setup_logging(config: Dict) -> None:
@@ -92,6 +98,20 @@ def get_llm_api_key(config: Dict, provider: Optional[str] = None) -> str:
     
     # Fall back to the configured api_key_env if no match
     return os.environ.get(config["llm"].get("api_key_env", ""), "")
+
+
+def get_llm_base_url(config: Dict, provider: Optional[str] = None) -> str:
+    """Get the optional base URL for the LLM provider.
+    
+    Resolution order:
+    1) config["llm"]["base_url"] if present and non-empty
+    2) environment variable LLM_BASE_URL
+    3) empty string
+    """
+    base_url = (config or {}).get("llm", {}).get("base_url")
+    if base_url:
+        return base_url
+    return os.environ.get("LLM_BASE_URL", "")
 
 
 def validate_llm_provider(config: Dict, provider: Optional[str] = None) -> tuple[bool, str]:
