@@ -1,9 +1,13 @@
 {
+    "version": 2,
     "devCommand": "/usr/local/bin/gunicorn --bind 0.0.0.0:11235 --workers 1 --threads 4 --timeout 1800 --graceful-timeout 30 --keep-alive 300 --log-level info --worker-class uvicorn.workers.UvicornWorker server:app",
     "builds": [
         {
             "src": "server.py",
             "use": "@vercel/python"
         }
+    ],
+    "routes": [
+        { "src": "/(.*)", "dest": "server.py" }
     ]
 }
