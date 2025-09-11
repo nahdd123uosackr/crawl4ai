@@ -165,7 +165,11 @@ RUN mkdir -p /home/appuser/.cache/ms-playwright \
     && cp -r /root/.cache/ms-playwright/chromium-* /home/appuser/.cache/ms-playwright/ \
     && chown -R appuser:appuser /home/appuser/.cache/ms-playwright
 
-RUN crawl4ai-doctor
+RUN if [ "${TARGETPLATFORM:-}" = "linux/amd64" ]; then \
+    echo "Running crawl4ai-doctor on amd64" && crawl4ai-doctor; \
+else \
+    echo "Skipping crawl4ai-doctor on non-amd64 platform (${TARGETPLATFORM:-unknown}) to avoid Playwright/Chromium QEMU crashes"; \
+fi
 
 # Copy application code
 COPY deploy/docker/* ${APP_HOME}/
