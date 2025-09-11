@@ -50,6 +50,7 @@ from rank_bm25 import BM25Okapi
 from fastapi.responses import (
     StreamingResponse, RedirectResponse, PlainTextResponse, JSONResponse
 )
+from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -443,7 +444,7 @@ async def crawl(
         crawler_config=crawl_request.crawler_config,
         config=config,
     )
-    return JSONResponse(res)
+    return JSONResponse(jsonable_encoder(res))
 
 
 @app.post("/crawl/stream")
