@@ -6,6 +6,7 @@ from contextlib import suppress
 from typing import Any, Callable, Dict, List, Tuple
 import httpx
 
+import logging
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi import Request
@@ -89,9 +90,16 @@ def attach_mcp(
 
         key = fn.__mcp_name__ or re.sub(r"[/{}}]", "_", route.path).strip("_")
 
-        # if kind == "tool":
-        #     tools[key] = _make_http_proxy(base_url, route)
+        # Avoid proxying streaming endpoints which return StreamingResponse
+        # to prevent ASGI message ordering errors when MCP wraps the call.
+        # Explicitly exclude '/crawl/stream' and any route that has 'stream' in path.
         if kind == "tool":
+            if "/stream" in route.path:
+                # register original function as tool without proxying
+                tools[key] = (None, fn)
+                logger = logging.getLogger(__name__)
+                logger.info(f"Skipping HTTP proxy for streaming tool: {route.path} (registered raw)")
+                continue
             proxy = _make_http_proxy(base_url, route)
             tools[key] = (proxy, fn)
             continue
@@ -129,13 +137,24 @@ def attach_mcp(
         if name not in tools:
             raise HTTPException(404, "tool not found")
         
-        proxy, _ = tools[name]
+        proxy, orig_fn = tools[name]
         try:
-            res = await proxy(**(arguments or {}))
+            if proxy is None:
+                # call original FastAPI handler directly (non-proxied streaming/tool)
+                # If the function is async, await it; otherwise, call normally.
+                if inspect.iscoroutinefunction(orig_fn):
+                    res = await orig_fn(**(arguments or {}))
+                else:
+                    res = orig_fn(**(arguments or {}))
+            else:
+                res = await proxy(**(arguments or {}))
         except HTTPException as exc:
             # map server‑side errors into MCP "text/error" payloads
             err = {"error": exc.status_code, "detail": exc.detail}
             return [t.TextContent(type = "text", text=json.dumps(err))]
+        except Exception as exc:
+            return [t.TextContent(type = "text", text=json.dumps({"error": "internal", "detail": str(exc)}))]
+
         return [t.TextContent(type = "text", text=json.dumps(res, default=str))]
 
     @mcp.list_resources()
