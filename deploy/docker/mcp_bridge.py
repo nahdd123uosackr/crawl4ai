@@ -221,12 +221,17 @@ def attach_mcp(
     # ── SSE transport (official) ─────────────────────────────
     sse = SseServerTransport(f"{base}/messages/")
 
-    @app.get(f"{base}/sse")
-    async def _mcp_sse(request: Request):
-        async with sse.connect_sse(
-            request.scope, request.receive, request._send  # starlette ASGI primitives
-        ) as (read_stream, write_stream):
+    # Use a raw ASGI app to ensure we get the correct `send` from the
+    # Starlette middleware chain, avoiding BaseHTTPMiddleware assertion errors.
+    async def _mcp_sse_asgi(scope, receive, send):
+        # Only handle HTTP connect for SSE
+        if scope.get("type") != "http":
+            return
+        async with sse.connect_sse(scope, receive, send) as (read_stream, write_stream):
             await mcp.run(read_stream, write_stream, init_opts)
+
+    # Mount the ASGI app at the SSE path so it bypasses FastAPI's request wrappers
+    app.mount(f"{base}/sse", app=_mcp_sse_asgi)
 
     # client → server frames are POSTed here
     app.mount(f"{base}/messages", app=sse.handle_post_message)

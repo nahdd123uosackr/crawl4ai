@@ -72,7 +72,7 @@ async def llm_job_status(
     task_id: str,
     _td: Dict = Depends(lambda: _token_dep())
 ):
-    return await handle_task_status(_redis, task_id)
+    return await handle_task_status(_redis, task_id, base_url=str(request.base_url))
 
 
 # ---------- CRAWL job -------------------------------------------------------
