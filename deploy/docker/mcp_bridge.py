@@ -250,10 +250,12 @@ def attach_mcp(
             await mcp.run(read_stream, write_stream, init_opts)
 
     # Mount the ASGI app at the SSE path so it bypasses FastAPI's request wrappers
-    app.mount(f"{base}/sse", app=_mcp_sse_asgi)
+    # Use trailing slashes to avoid FastAPI issuing a 307 redirect from '/sse' -> '/sse/'
+    app.mount(f"{base}/sse/", app=_mcp_sse_asgi)
 
     # client → server frames are POSTed here
-    app.mount(f"{base}/messages", app=sse.handle_post_message)
+    # Use trailing slash for consistency and to avoid redirect responses
+    app.mount(f"{base}/messages/", app=sse.handle_post_message)
 
     # ── schema endpoint ───────────────────────────────────────
     @app.get(f"{base}/schema")
