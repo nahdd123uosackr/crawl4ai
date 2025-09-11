@@ -238,7 +238,9 @@ def attach_mcp(
             tg.start_soon(srv_to_ws)
 
     # ── SSE transport (official) ─────────────────────────────
-    sse = SseServerTransport(f"{base}/messages/")
+    # Initialize SSE transport for messages. Use base without trailing slash
+    # to avoid doubling the base path when the ASGI mount is under '/sse/'.
+    sse = SseServerTransport(f"{base}/messages")
 
     # Use a raw ASGI app to ensure we get the correct `send` from the
     # Starlette middleware chain, avoiding BaseHTTPMiddleware assertion errors.
@@ -251,11 +253,15 @@ def attach_mcp(
 
     # Mount the ASGI app at the SSE path so it bypasses FastAPI's request wrappers
     # Use trailing slashes to avoid FastAPI issuing a 307 redirect from '/sse' -> '/sse/'
+    # Mount ASGI app at both with and without trailing slash to avoid
+    # redirect and to make behavior consistent behind proxies.
     app.mount(f"{base}/sse/", app=_mcp_sse_asgi)
+    app.mount(f"{base}/sse", app=_mcp_sse_asgi)
 
     # client → server frames are POSTed here
     # Use trailing slash for consistency and to avoid redirect responses
     app.mount(f"{base}/messages/", app=sse.handle_post_message)
+    app.mount(f"{base}/messages", app=sse.handle_post_message)
 
     # ── schema endpoint ───────────────────────────────────────
     @app.get(f"{base}/schema")
