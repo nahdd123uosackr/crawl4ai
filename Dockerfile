@@ -129,7 +129,6 @@ COPY deploy/docker/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 RUN if [ "$INSTALL_TYPE" = "all" ] ; then \
-        pip uninstall -y jwt && \\
         pip install --no-cache-dir PyJWT \
             torch \
             torchvision \
@@ -140,7 +139,7 @@ RUN if [ "$INSTALL_TYPE" = "all" ] ; then \
             tokenizers && \
         python -m nltk.downloader punkt stopwords ; \
     fi
-
+    
 RUN if [ "$INSTALL_TYPE" = "all" ] ; then \
         pip install "/tmp/project/[all]" && \
         python -m crawl4ai.model_loader ; \
@@ -157,6 +156,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
     /tmp/install.sh && \
     python -c "import crawl4ai; print('✅ crawl4ai is ready to rock!')" && \
     python -c "from playwright.sync_api import sync_playwright; print('✅ Playwright is feeling dramatic!')"
+
+RUN pip uninstall -y jwt
 
 RUN crawl4ai-setup
 
