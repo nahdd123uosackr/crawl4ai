@@ -129,7 +129,7 @@ COPY deploy/docker/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 RUN if [ "$INSTALL_TYPE" = "all" ] ; then \
-        pip install --no-cache-dir \
+        pip install --no-cache-dir PyJWT \
             torch \
             torchvision \
             torchaudio \
